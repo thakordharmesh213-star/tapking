@@ -32,7 +32,7 @@ jobs:
           pip install buildozer cython==0.29.34
 
       - name: Build APK
-        run:|
+        run: |
           yes | buildozer android debug
 
       - name: Upload APK
