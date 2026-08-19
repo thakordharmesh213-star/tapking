@@ -1,42 +1,15 @@
-name: Build Tap King APK
+- name: Prepare Android SDK Licenses
+  run: |
+    set +e
+    SDK="$HOME/.buildozer/android/platform/android-sdk"
+    SDKMANAGER=$(find "$SDK" -name sdkmanager -type f 2>/dev/null | head -1)
 
-"on":
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+    if [ -n "$SDKMANAGER" ]; then
+      yes | "$SDKMANAGER" --licenses || true
+    fi
 
-jobs:
-  build:
-    runs-on: ubuntu-22.04
+- name: Build APK
+  run: buildozer android debug
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git zip unzip openjdk-17-jdk \
-            autoconf automake libtool pkg-config zlib1g-dev \
-            libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev
-
-      - name: Install Buildozer
-        run: |
-          python -m pip install --upgrade pip
-          pip install buildozer cython==0.29.34
-
-      - name: Build APK
-        run: buildozer android debug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: tapking-apk
-          path: bin/*.apk
 
