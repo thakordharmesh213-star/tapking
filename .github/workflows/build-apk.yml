@@ -1,15 +1,67 @@
-- name: Prepare Android SDK Licenses
-  run: |
-    set +e
-    SDK="$HOME/.buildozer/android/platform/android-sdk"
-    SDKMANAGER=$(find "$SDK" -name sdkmanager -type f 2>/dev/null | head -1)
+name: Build Tap King APK
 
-    if [ -n "$SDKMANAGER" ]; then
-      yes | "$SDKMANAGER" --licenses || true
-    fi
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-- name: Build APK
-  run: buildozer android debug
+jobs:
+  build:
+    runs-on: ubuntu-22.04
 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          pip install buildozer cython==0.29.34
+
+      - name: Prepare Android SDK
+        run: |
+          export ANDROIDSDK=/usr/local/lib/android/sdk
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+
+          SDKMANAGER=$(find "$ANDROIDSDK/cmdline-tools" \
+            -name sdkmanager -type f 2>/dev/null | head -1)
+
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "$ANDROIDSDK" \
+              -name sdkmanager -type f 2>/dev/null | head -1)
+          fi
+
+          echo "SDKMANAGER=$SDKMANAGER"
+
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses || true
+            "$SDKMANAGER" "platform-tools" "platforms;android-33" "build-tools;37.0.0"
+          else
+            echo "sdkmanager not found"
+            exit 1
+          fi
+
+      - name: Build APK
+        env:
+          ANDROIDSDK: /usr/local/lib/android/sdk
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+          ANDROIDNDK: /usr/local/lib/android/sdk/ndk/27.3.13750724
+        run: |
+          buildozer android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tap-King-APK
+          path: bin/*.apk
+          if-no-files-found: error
 
 
